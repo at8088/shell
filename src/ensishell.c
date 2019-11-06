@@ -12,6 +12,11 @@
 #include "variante.h"
 #include "readcmd.h"
 
+
+
+#include <sys/types.h>
+#include <sys/wait.h>
+
 #ifndef VARIANTE
 #error "Variante non défini !!"
 #endif
@@ -24,6 +29,48 @@
 
 #if USE_GUILE == 1
 #include <libguile.h>
+
+
+
+void handler(int signum) 
+{ 
+   waitpid(WAIT_ANY, NULL, WNOHANG);
+  
+} 
+ 
+
+typedef struct _cell{
+    int status;
+    int pid;
+    char* command;
+    struct _cell* next;
+}*list_jobs;
+
+
+
+void add_first(list_jobs* l,int status,int pid,char* command){
+    list_jobs p = calloc(1,sizeof(p));
+    p->status = status;
+    p->pid = pid;
+    p->command = calloc(strlen(command),sizeof(char));
+	p->next = NULL;
+    strcpy(p->command,command);
+    if(*l==NULL) *l=p;
+    else{
+        p->next = *l;
+        *l=p;
+    }
+}
+void print_jobs(list_jobs l){
+	list_jobs p = l;
+	while (p!=NULL){
+		printf("pid=%d ; commande = %s\n",p->pid,p->command);
+		p=p->next;
+	}
+}
+
+
+
 
 int question6_executer(char *line)
 {
@@ -67,12 +114,13 @@ int main() {
         /* register "executer" function in scheme */
         scm_c_define_gsubr("executer", 1, 0, 0, executer_wrapper);
 #endif
-
+	list_jobs l_jobs = 0;
 	while (1) {
 		struct cmdline *l;
 		char *line=0;
-		int i, j;
+		// int i, j;
 		char *prompt = "ensishell>";
+		
 
 		/* Readline use some internal memory structure that
 		   can not be cleaned at the end of the program. Thus
@@ -100,6 +148,34 @@ int main() {
 
 		/* parsecmd free line and set it up to 0 */
 		l = parsecmd( & line);
+		pid_t child_pid;
+		
+		if(l && (*l->seq)){
+			if(!strcmp(*l->seq[0],"jobs")){
+				print_jobs(l_jobs);
+			}
+		}
+
+		switch(child_pid=fork()){
+			case -1:
+				perror("fork:");
+				break;
+			case 0:
+				
+				execvp(*l->seq[0],*l->seq);
+				
+				break;
+			default:
+
+				if(!l->bg){
+    				waitpid(child_pid,NULL,0);
+				}else{
+					signal(SIGCHLD,handler);
+					add_first(&l_jobs,0,child_pid,*l->seq[0]);
+				}
+				
+  			
+		}
 
 		/* If input stream closed, normal termination */
 		if (!l) {
@@ -107,8 +183,7 @@ int main() {
 			terminate(0);
 		}
 		
-
-		
+		//print_jobs(l_jobs);
 		if (l->err) {
 			/* Syntax error, read another command */
 			printf("error: %s\n", l->err);
@@ -120,14 +195,14 @@ int main() {
 		if (l->bg) printf("background (&)\n");
 
 		/* Display each command of the pipe */
-		for (i=0; l->seq[i]!=0; i++) {
+		/* for (i=0; l->seq[i]!=0; i++) {
 			char **cmd = l->seq[i];
 			printf("seq[%d]: ", i);
                         for (j=0; cmd[j]!=0; j++) {
                                 printf("'%s' ", cmd[j]);
                         }
 			printf("\n");
-		}
+		} */
 	}
 
 }

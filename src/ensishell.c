@@ -40,7 +40,6 @@ void handler(int signum)
  
 
 typedef struct _cell{
-    int status;
     int pid;
     char* command;
     struct _cell* next;
@@ -48,9 +47,8 @@ typedef struct _cell{
 
 
 
-void add_first(list_jobs* l,int status,int pid,char* command){
+void add_first(list_jobs* l,int pid,char* command){
     list_jobs p = calloc(1,sizeof(p));
-    p->status = status;
     p->pid = pid;
     p->command = calloc(strlen(command),sizeof(char));
 	p->next = NULL;
@@ -60,6 +58,26 @@ void add_first(list_jobs* l,int status,int pid,char* command){
         p->next = *l;
         *l=p;
     }
+}
+void remove_job(list_jobs *l , int pid){
+	
+	if(*l != NULL){
+		if ((*l)->pid){
+			if ((*l)->next == NULL){
+				free(*l);
+				*l=NULL;
+			}else{
+				list_jobs p = *l;
+				*l=(*l)->next;
+				free(p);
+				p=NULL;
+			}
+		}
+		else{
+			remove_job(&((*l)->next),pid);
+		}
+	}
+		
 }
 void print_jobs(list_jobs l){
 	list_jobs p = l;
@@ -152,6 +170,8 @@ int main() {
 		
 		if(l && (*l->seq)){
 			if(!strcmp(*l->seq[0],"jobs")){
+				//int pid = waitpid(-1,NULL,WNOHANG);
+				//remove_job(&l_jobs,pid);
 				print_jobs(l_jobs);
 			}
 		}
@@ -171,9 +191,8 @@ int main() {
     				waitpid(child_pid,NULL,0);
 				}else{
 					signal(SIGCHLD,handler);
-					add_first(&l_jobs,0,child_pid,*l->seq[0]);
+					add_first(&l_jobs,child_pid,*l->seq[0]);
 				}
-				
   			
 		}
 

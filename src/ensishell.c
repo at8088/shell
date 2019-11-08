@@ -32,12 +32,12 @@
 
 
 
-void handler(int signum) 
-{ 
+void handler(int signum)
+{
    waitpid(WAIT_ANY, NULL, WNOHANG);
-  
-} 
- 
+
+}
+
 
 typedef struct _cell{
     int pid;
@@ -51,7 +51,7 @@ void add_first(list_jobs* l,int pid,char* command){
     list_jobs p = calloc(1,sizeof(p));
     p->pid = pid;
     p->command = calloc(strlen(command),sizeof(char));
-	p->next = NULL;
+	  p->next = NULL;
     strcpy(p->command,command);
     if(*l==NULL) *l=p;
     else{
@@ -60,24 +60,18 @@ void add_first(list_jobs* l,int pid,char* command){
     }
 }
 void remove_job(list_jobs *l , int pid){
-	
+
 	if(*l != NULL){
-		if ((*l)->pid){
-			if ((*l)->next == NULL){
-				free(*l);
-				*l=NULL;
-			}else{
-				list_jobs p = *l;
-				*l=(*l)->next;
-				free(p);
-				p=NULL;
-			}
+		if ( (((*l)->next)->pid)==pid ){
+      list_jobs p = (*l)->next;
+      (*l)->next=((*l)->next)->next;
+      free(p);
 		}
 		else{
 			remove_job(&((*l)->next),pid);
 		}
 	}
-		
+
 }
 void print_jobs(list_jobs l){
 	list_jobs p = l;
@@ -101,7 +95,7 @@ int question6_executer(char *line)
 
 	/* Remove this line when using parsecmd as it will free it */
 	free(line);
-	
+
 	return 0;
 }
 
@@ -138,7 +132,7 @@ int main() {
 		char *line=0;
 		// int i, j;
 		char *prompt = "ensishell>";
-		
+
 
 		/* Readline use some internal memory structure that
 		   can not be cleaned at the end of the program. Thus
@@ -167,7 +161,7 @@ int main() {
 		/* parsecmd free line and set it up to 0 */
 		l = parsecmd( & line);
 		pid_t child_pid;
-		
+
 		if(l && (*l->seq)){
 			if(!strcmp(*l->seq[0],"jobs")){
 				//int pid = waitpid(-1,NULL,WNOHANG);
@@ -181,9 +175,9 @@ int main() {
 				perror("fork:");
 				break;
 			case 0:
-				
+
 				execvp(*l->seq[0],*l->seq);
-				
+
 				break;
 			default:
 
@@ -193,15 +187,15 @@ int main() {
 					signal(SIGCHLD,handler);
 					add_first(&l_jobs,child_pid,*l->seq[0]);
 				}
-  			
+
 		}
 
 		/* If input stream closed, normal termination */
 		if (!l) {
-		  
+
 			terminate(0);
 		}
-		
+
 		//print_jobs(l_jobs);
 		if (l->err) {
 			/* Syntax error, read another command */

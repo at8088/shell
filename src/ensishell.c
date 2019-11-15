@@ -29,14 +29,10 @@
 
 #if USE_GUILE == 1
 #include <libguile.h>
+#include <stdio.h>
 
 
 
-void handler(int signum) 
-{ 
-   waitpid(WAIT_ANY, NULL, WNOHANG);
-  
-} 
  
 
 typedef struct _cell{
@@ -47,7 +43,7 @@ typedef struct _cell{
 
 
 
-void add_first(list_jobs* l,int pid,char* command){
+void add_job(list_jobs* l,int pid,char* command){
     list_jobs p = calloc(1,sizeof(p));
     p->pid = pid;
     p->command = calloc(strlen(command),sizeof(char));
@@ -59,25 +55,29 @@ void add_first(list_jobs* l,int pid,char* command){
         *l=p;
     }
 }
-void remove_job(list_jobs *l , int pid){
-	
-	if(*l != NULL){
-		if ((*l)->pid){
-			if ((*l)->next == NULL){
-				free(*l);
-				*l=NULL;
-			}else{
-				list_jobs p = *l;
-				*l=(*l)->next;
+void remove_job( list_jobs*l , int pid){
+	if(*l!=NULL){
+		if ((*l)->pid == pid){
+			list_jobs p = *l;
+			*l=(*l)->next;
+			free(p);
+			*l=NULL;
+			return;
+		}
+		list_jobs courant = (*l)->next;
+		list_jobs precedent = *l;
+		while (courant != NULL){
+			if (courant->pid == pid){
+				list_jobs p = courant;
+				precedent->next = courant->next;
 				free(p);
 				p=NULL;
+				return;
 			}
-		}
-		else{
-			remove_job(&((*l)->next),pid);
+			precedent = courant;
+			courant = courant->next;
 		}
 	}
-		
 }
 void print_jobs(list_jobs l){
 	list_jobs p = l;
@@ -170,8 +170,9 @@ int main() {
 		
 		if(l && (*l->seq)){
 			if(!strcmp(*l->seq[0],"jobs")){
-				//int pid = waitpid(-1,NULL,WNOHANG);
-				//remove_job(&l_jobs,pid);
+				
+				int pid = waitpid(-1,NULL,WNOHANG);
+				remove_job(&l_jobs,pid);
 				print_jobs(l_jobs);
 			}
 		}
@@ -183,6 +184,7 @@ int main() {
 			case 0:
 				
 				execvp(*l->seq[0],*l->seq);
+				exit(0);
 				
 				break;
 			default:
@@ -190,8 +192,8 @@ int main() {
 				if(!l->bg){
     				waitpid(child_pid,NULL,0);
 				}else{
-					signal(SIGCHLD,handler);
-					add_first(&l_jobs,child_pid,*l->seq[0]);
+					waitpid(WAIT_ANY, NULL, WNOHANG);
+					add_job(&l_jobs,child_pid,*l->seq[0]);
 				}
   			
 		}

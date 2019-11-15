@@ -47,7 +47,7 @@ void add_job(list_jobs* l,int pid,char* command){
     list_jobs p = calloc(1,sizeof(p));
     p->pid = pid;
     p->command = calloc(strlen(command),sizeof(char));
-	p->next = NULL;
+	  p->next = NULL;
     strcpy(p->command,command);
     if(*l==NULL) *l=p;
     else{
@@ -101,7 +101,7 @@ int question6_executer(char *line)
 
 	/* Remove this line when using parsecmd as it will free it */
 	free(line);
-	
+
 	return 0;
 }
 
@@ -138,7 +138,7 @@ int main() {
 		char *line=0;
 		// int i, j;
 		char *prompt = "ensishell>";
-		
+
 
 		/* Readline use some internal memory structure that
 		   can not be cleaned at the end of the program. Thus
@@ -167,7 +167,7 @@ int main() {
 		/* parsecmd free line and set it up to 0 */
 		l = parsecmd( & line);
 		pid_t child_pid;
-		
+
 		if(l && (*l->seq)){
 			if(!strcmp(*l->seq[0],"jobs")){
 				
@@ -182,10 +182,8 @@ int main() {
 				perror("fork:");
 				break;
 			case 0:
-				
+
 				execvp(*l->seq[0],*l->seq);
-				exit(0);
-				
 				break;
 			default:
 
@@ -195,15 +193,15 @@ int main() {
 					waitpid(WAIT_ANY, NULL, WNOHANG);
 					add_job(&l_jobs,child_pid,*l->seq[0]);
 				}
-  			
+
 		}
 
 		/* If input stream closed, normal termination */
 		if (!l) {
-		  
+
 			terminate(0);
 		}
-		
+
 		//print_jobs(l_jobs);
 		if (l->err) {
 			/* Syntax error, read another command */

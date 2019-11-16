@@ -61,7 +61,7 @@ void remove_job( list_jobs*l , int pid){
 			list_jobs p = *l;
 			*l=(*l)->next;
 			free(p);
-			*l=NULL;
+			p=NULL;
 			return;
 		}
 		list_jobs courant = (*l)->next;
@@ -119,7 +119,6 @@ void terminate(char *line) {
 #endif
 	if (line)
 	  free(line);
-	printf("exit\n");
 	exit(0);
 }
 
@@ -176,25 +175,47 @@ int main() {
 				print_jobs(l_jobs);
 			}
 		}
+		int p[2];
+		if (pipe(p) < 0){
+			perror("pipe:")
+			exit(1);
+		}
+		
+		
 
 		switch(child_pid=fork()){
 			case -1:
 				perror("fork:");
 				break;
 			case 0:
-
-				execvp(*l->seq[0],*l->seq);
-				break;
+				if (l->seq[1] != NULL){
+					dup2(p[1],1);
+					if (fork() == 0){
+						waitpid(child_pid,NULL,0);
+						int  i;
+						for ( i = 0; l->seq[1][i]!=0; i++);
+						
+						// reste de faire lire la 2eme commande p[0]
+						execvp(*l->seq[1],&(*l->seq[1]));
+					}
+					
+				}
+				
+				execvp(*l->seq[0],&(*l->seq[0]));
+				//pas besoin de break car tout ce qui vient apres ne s'execute pas
 			default:
-
 				if(!l->bg){
-    				waitpid(child_pid,NULL,0);
+					waitpid(child_pid,NULL,0);
 				}else{
 					waitpid(WAIT_ANY, NULL, WNOHANG);
 					add_job(&l_jobs,child_pid,*l->seq[0]);
 				}
-
 		}
+		
+			
+
+		
+
 
 		/* If input stream closed, normal termination */
 		if (!l) {
@@ -214,14 +235,14 @@ int main() {
 		if (l->bg) printf("background (&)\n");
 
 		/* Display each command of the pipe */
-		/* for (i=0; l->seq[i]!=0; i++) {
+		for (int i=0; l->seq[i]!=0; i++) {
 			char **cmd = l->seq[i];
 			printf("seq[%d]: ", i);
-                        for (j=0; cmd[j]!=0; j++) {
+                        for (int j=0; cmd[j]!=0; j++) {
                                 printf("'%s' ", cmd[j]);
                         }
 			printf("\n");
-		} */
+		} 
 	}
 
 }

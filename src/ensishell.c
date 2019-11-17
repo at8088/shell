@@ -185,7 +185,7 @@ int main() {
 		
 		
 		int sortie_pipe ;
-
+		int in_fd ;
 		switch(child_pid=fork()){
 			case -1:
 				perror("fork:");
@@ -195,8 +195,17 @@ int main() {
 					close(p[0]);
 					dup2(p[1],1);
 				}
-				
+				if (l->in){
+					in_fd = open(l->in,O_RDONLY);
+					dup2(in_fd,STDIN_FILENO);
+					// char buf[100];
+					// read(STDIN_FILENO,buf,50);
+					// puts(buf);
+					
+				}
 				execvp(*l->seq[0],&(*l->seq[0]));
+				
+				
 			default:
 				if (l->seq[0]!= NULL){
 					if(l->seq[1]){
@@ -214,13 +223,18 @@ int main() {
 				}
 				close(p[0]);
 				close(p[1]);
+				if (l->in)
+				{
+					close(in_fd);
+				}
+				
 				if(!l->bg){
 					if (l->seq[1]){
 						waitpid(sortie_pipe,NULL,0);
 					}
 					waitpid(child_pid,NULL,0);
 				}else{
-					waitpid(child_pid, NULL, WNOHANG);
+					waitpid(-1, NULL, WNOHANG);
 					add_job(&l_jobs,child_pid,*l->seq[0]);
 				}
 		}

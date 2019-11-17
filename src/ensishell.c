@@ -184,7 +184,7 @@ int main() {
 		}
 		
 		
-		int g ;
+		int sortie_pipe ;
 
 		switch(child_pid=fork()){
 			case -1:
@@ -200,7 +200,7 @@ int main() {
 			default:
 				if (l->seq[0]!= NULL){
 					if(l->seq[1]){
-						if ((g = fork()) == 0){
+						if ((sortie_pipe = fork()) == 0){
 							close(p[1]);
 							dup2(p[0],0);
 							execvp(*l->seq[1],&(*l->seq[1]));
@@ -216,7 +216,7 @@ int main() {
 				close(p[1]);
 				if(!l->bg){
 					if (l->seq[1]){
-						waitpid(g,NULL,0);
+						waitpid(sortie_pipe,NULL,0);
 					}
 					waitpid(child_pid,NULL,0);
 				}else{

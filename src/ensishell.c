@@ -15,6 +15,7 @@
 
 
 #include <sys/types.h>
+#include <fcntl.h>
 #include <sys/wait.h>
 
 #ifndef VARIANTE
@@ -173,15 +174,17 @@ int main() {
 				int pid = waitpid(-1,NULL,WNOHANG);
 				remove_job(&l_jobs,pid);
 				print_jobs(l_jobs);
+				continue;
 			}
 		}
 		int p[2];
 		if (pipe(p) < 0){
-			perror("pipe:")
+			perror("pipe:");
 			exit(1);
 		}
 		
 		
+		int g ;
 
 		switch(child_pid=fork()){
 			case -1:
@@ -189,25 +192,35 @@ int main() {
 				break;
 			case 0:
 				if (l->seq[1] != NULL){
+					close(p[0]);
 					dup2(p[1],1);
-					if (fork() == 0){
-						waitpid(child_pid,NULL,0);
-						int  i;
-						for ( i = 0; l->seq[1][i]!=0; i++);
-						
-						// reste de faire lire la 2eme commande p[0]
-						execvp(*l->seq[1],&(*l->seq[1]));
-					}
-					
 				}
 				
 				execvp(*l->seq[0],&(*l->seq[0]));
-				//pas besoin de break car tout ce qui vient apres ne s'execute pas
 			default:
+				if (l->seq[0]!= NULL){
+					if(l->seq[1]){
+						if ((g = fork()) == 0){
+							close(p[1]);
+							dup2(p[0],0);
+							execvp(*l->seq[1],&(*l->seq[1]));
+							perror("Echec deuxieme commande");
+							exit(EXIT_FAILURE);
+							
+						}
+
+					}
+
+				}
+				close(p[0]);
+				close(p[1]);
 				if(!l->bg){
+					if (l->seq[1]){
+						waitpid(g,NULL,0);
+					}
 					waitpid(child_pid,NULL,0);
 				}else{
-					waitpid(WAIT_ANY, NULL, WNOHANG);
+					waitpid(child_pid, NULL, WNOHANG);
 					add_job(&l_jobs,child_pid,*l->seq[0]);
 				}
 		}
@@ -235,14 +248,14 @@ int main() {
 		if (l->bg) printf("background (&)\n");
 
 		/* Display each command of the pipe */
-		for (int i=0; l->seq[i]!=0; i++) {
-			char **cmd = l->seq[i];
-			printf("seq[%d]: ", i);
-                        for (int j=0; cmd[j]!=0; j++) {
-                                printf("'%s' ", cmd[j]);
-                        }
-			printf("\n");
-		} 
+		// for (int i=0; l->seq[i]!=0; i++) {
+		// 	char **cmd = l->seq[i];
+		// 	printf("seq[%d]: ", i);
+        //                 for (int j=0; cmd[j]!=0; j++) {
+        //                         printf("'%s' ", cmd[j]);
+        //                 }
+		// 	printf("\n");
+		// } 
 	}
 
 }

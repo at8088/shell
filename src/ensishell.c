@@ -234,7 +234,7 @@ int main() {
 					}
 					waitpid(child_pid,NULL,0);
 				}else{
-					waitpid(-1, NULL, WNOHANG);
+					waitpid(child_pid, NULL, WNOHANG);
 					add_job(&l_jobs,child_pid,*l->seq[0]);
 				}
 		}

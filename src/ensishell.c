@@ -34,7 +34,7 @@
 
 
 
- 
+/*********** Liste des processus en fond de tâche ***************/ 
 
 typedef struct _cell{
     int pid;
@@ -88,7 +88,7 @@ void print_jobs(list_jobs l){
 	}
 }
 
-
+/***********************************************************************/
 
 
 int question6_executer(char *line)
@@ -170,7 +170,6 @@ int main() {
 
 		if(l && (*l->seq)){
 			if(!strcmp(*l->seq[0],"jobs")){
-				
 				int pid = waitpid(-1,NULL,WNOHANG);
 				remove_job(&l_jobs,pid);
 				print_jobs(l_jobs);
@@ -182,9 +181,9 @@ int main() {
 			perror("pipe:");
 			exit(1);
 		}
-		
-		
+
 		int sortie_pipe ;
+		int out_fd ;
 		int in_fd ;
 		switch(child_pid=fork()){
 			case -1:
@@ -195,17 +194,17 @@ int main() {
 					close(p[0]);
 					dup2(p[1],1);
 				}
+				if (l->out){
+					out_fd = open(l->out,O_CREAT|O_WRONLY,S_IRUSR|S_IWUSR); 
+					dup2(out_fd,STDOUT_FILENO);
+					close(out_fd);
+				}
 				if (l->in){
-					in_fd = open(l->in,O_RDONLY);
+					in_fd=open(l->in,O_RDONLY);
 					dup2(in_fd,STDIN_FILENO);
-					// char buf[100];
-					// read(STDIN_FILENO,buf,50);
-					// puts(buf);
-					
+					close(in_fd);
 				}
 				execvp(*l->seq[0],&(*l->seq[0]));
-				
-				
 			default:
 				if (l->seq[0]!= NULL){
 					if(l->seq[1]){
@@ -215,18 +214,11 @@ int main() {
 							execvp(*l->seq[1],&(*l->seq[1]));
 							perror("Echec deuxieme commande");
 							exit(EXIT_FAILURE);
-							
 						}
-
 					}
-
 				}
 				close(p[0]);
 				close(p[1]);
-				if (l->in)
-				{
-					close(in_fd);
-				}
 				
 				if(!l->bg){
 					if (l->seq[1]){
@@ -237,26 +229,19 @@ int main() {
 					waitpid(child_pid, NULL, WNOHANG);
 					add_job(&l_jobs,child_pid,*l->seq[0]);
 				}
+
 		}
 		
-			
-
-		
-
 
 		/* If input stream closed, normal termination */
 		if (!l) {
-
 			terminate(0);
 		}
-
-		//print_jobs(l_jobs);
 		if (l->err) {
 			/* Syntax error, read another command */
 			printf("error: %s\n", l->err);
 			continue;
 		}
-
 		if (l->in) printf("in: %s\n", l->in);
 		if (l->out) printf("out: %s\n", l->out);
 		if (l->bg) printf("background (&)\n");

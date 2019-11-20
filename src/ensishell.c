@@ -11,7 +11,7 @@
 
 #include "variante.h"
 #include "readcmd.h"
-
+#include <wordexp.h>
 
 
 #include <sys/types.h>
@@ -90,18 +90,38 @@ void print_jobs(list_jobs l){
 
 /***********************************************************************/
 
+void traitant(int sig){
+
+	int pid = waitpid(-1,0,WNOHANG);
+	if(pid > 0){
+		printf("\nprocess [%d] is done.\n",pid);
+	}
+
+}
+
+
+
+
+/******************************************************************** */
+
 
 int question6_executer(char *line)
 {
-	/* Question 6: Insert your code to execute the command line
-	 * identically to the standard execution scheme:
-	 * parsecmd, then fork+execvp, for a single command.
-	 * pipe and i/o redirection are not required.
-	 */
-	printf("Not implemented yet: can not execute %s\n", line);
-
-	/* Remove this line when using parsecmd as it will free it */
-	free(line);
+	struct cmdline * l;
+	l = parsecmd(&line);
+	switch (fork())
+	{
+	case -1:
+		perror("fork");
+		break;
+	case 0:
+		execvp(*l->seq[0],&(*l->seq[0]));
+	
+	default:
+		wait(0);
+		break;
+	}
+	
 
 	return 0;
 }
@@ -166,6 +186,16 @@ int main() {
 
 		/* parsecmd free line and set it up to 0 */
 		l = parsecmd( & line);
+		// wordexp_t options ;
+		// if (l->seq)
+		// {
+		// 	if (l->seq[0][1])
+		// 	{
+		// 		wordexp(l->seq[0][1],&options,0);
+		// 	}
+			
+		// }
+		
 		pid_t child_pid;
 
 		if(l && (*l->seq)){
@@ -183,8 +213,8 @@ int main() {
 		}
 
 		int sortie_pipe ;
-		int out_fd ;
-		int in_fd ;
+		int out_fd = 0;
+		int in_fd  = 0;
 		switch(child_pid=fork()){
 			case -1:
 				perror("fork:");
@@ -204,6 +234,11 @@ int main() {
 					dup2(in_fd,STDIN_FILENO);
 					close(in_fd);
 				}
+				// char ** op = &(*l->seq[0]);
+				// if(options.we_wordv){
+				// 	op = options.we_wordv;
+				// }
+				
 				execvp(*l->seq[0],&(*l->seq[0]));
 			default:
 				if (l->seq[0]!= NULL){
@@ -219,17 +254,21 @@ int main() {
 				}
 				close(p[0]);
 				close(p[1]);
-				
+				// if (l->seq[0][1])
+				// {
+				// 	wordfree(&options);
+					
+				// }
 				if(!l->bg){
 					if (l->seq[1]){
 						waitpid(sortie_pipe,NULL,0);
 					}
 					waitpid(child_pid,NULL,0);
+					signal(SIGCHLD,traitant);
 				}else{
 					waitpid(child_pid, NULL, WNOHANG);
 					add_job(&l_jobs,child_pid,*l->seq[0]);
 				}
-
 		}
 		
 
@@ -251,7 +290,7 @@ int main() {
 		// 	char **cmd = l->seq[i];
 		// 	printf("seq[%d]: ", i);
         //                 for (int j=0; cmd[j]!=0; j++) {
-        //                         printf("'%s' ", cmd[j]);
+        //                         printf("l->seq[%d][%d] '%s' ",i,j, cmd[j]);
         //                 }
 		// 	printf("\n");
 		// } 

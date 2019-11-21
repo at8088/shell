@@ -88,16 +88,26 @@ void print_jobs(list_jobs l){
 	}
 }
 
+int is_in_bg_jobs(list_jobs l_jobs,int pid){
+	
+	list_jobs p = l_jobs;
+	while (p!=NULL)
+	{
+		if (p->pid == pid)
+		{
+			return 1;
+		}
+		p=p->next;
+		
+	}
+	return 0;
+	
+	}
+	
+
+
 /***********************************************************************/
 
-void traitant(int sig){
-
-	int pid = waitpid(-1,0,WNOHANG);
-	if(pid > 0){
-		printf("\nprocess [%d] is done.\n",pid);
-	}
-
-}
 
 
 
@@ -144,6 +154,21 @@ void terminate(char *line) {
 }
 
 
+/*Liste des processus lancés en tache de fond */
+list_jobs l_jobs = 0;
+
+void traitant(int sig){
+
+	int pid = waitpid(-1,0,WNOHANG);
+	if(pid > 0 && is_in_bg_jobs(l_jobs,pid)){
+		remove_job(&l_jobs,pid);
+		printf("\nprocess [%d] is done.\n",pid);
+	}
+
+}
+
+
+
 int main() {
         printf("Variante %d: %s\n", VARIANTE, VARIANTE_STRING);
 
@@ -152,11 +177,10 @@ int main() {
         /* register "executer" function in scheme */
         scm_c_define_gsubr("executer", 1, 0, 0, executer_wrapper);
 #endif
-	list_jobs l_jobs = 0;
+	// list_jobs l_jobs = 0;
 	while (1) {
 		struct cmdline *l;
 		char *line=0;
-		// int i, j;
 		char *prompt = "ensishell>";
 
 
@@ -200,8 +224,8 @@ int main() {
 
 		if(l && (*l->seq)){
 			if(!strcmp(*l->seq[0],"jobs")){
-				int pid = waitpid(-1,NULL,WNOHANG);
-				remove_job(&l_jobs,pid);
+				waitpid(-1,NULL,WNOHANG);
+				// remove_job(&l_jobs,pid);
 				print_jobs(l_jobs);
 				continue;
 			}
